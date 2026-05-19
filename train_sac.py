@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ReplayBuffer:
     def __init__(self, state_dim, action_dim, max_size=1e6, batch_size=256):
         self.max_size = max_size
-        self.batch_szie = batch_size
+        self.batch_size = batch_size
         self.ptr = 0
         self.size = 0
 
@@ -101,10 +101,9 @@ class SACAgent:
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
         self.critic1_optimizer = torch.optim.Adam(self.critic1.parameters(), lr=lr)
         self.critic2_optimizer = torch.optim.Adam(self.critic2.parameters(), lr=lr)
-        
-        self.log_alpha = torch.tensor(0.0, requires_grad=True)
+
+        self.log_alpha = nn.Parameter(torch.zeros(1))
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=lr)
-        self.alpha = self.log_alpha.exp()
         
         self.target_entropy = -action_dim
         self.gamma = 0.99
@@ -117,13 +116,52 @@ class SACAgent:
         next_state = torch.FloatTensor(batch['next_state'])
         done = torch.FloatTensor(batch['done'])
         
+        #==========================================
+        
         with torch.no_grad():
             next_action, next_log_prob = self.actor.sample(next_state)
             
-            target_q1 = self.critic1_target(next_state, next_action)
-            target_q2 = self.critic2_target(next_state, next_action)
-            target_q = torch.min(target_q1, target_q2)
+            next_q1 = self.critic1_target(next_state, next_action)
+            next_q2 = self.critic2_target(next_state, next_action)
+            next_q = torch.min(next_q1, next_q2)
             
-            target = reward + self.gamma * (1 - done) * (target_q - self.alpha * next_log_prob)
+            alpha = self.log_alpha.exp()            
+            target_q = reward + self.gamma * (1 - done) * (next_q - alpha * next_log_prob)
+            
+        q1 = self.critic1(state, action)
+        q2 = self.critic2(state, action)
+        
+        critic1_loss = F.mse_loss(q1, target_q)
+        critic2_loss = F.mse_loss(q2, target_q)
+        
+        self.critic1_optimizer.zero_grad()
+        critic1_loss.backward()
+        self.critic1_optimizer.step()
+        
+        self.critic2_optimizer.zero_grad()
+        critic2_loss.backward()
+        self.critic2_optimizer.step()
+        
+        #==========================================
+        
+        action_new, log_prob = self.actor.sample(state)
+        
+        q1_new = self.critic1(state, action_new)
+        q2_new = self.critic2(state, action_new)
+        q_new = torch.min(q1_new, q2_new)
+        
+        alpha = self.log_alpha.exp().detach()    
+        actor_loss = -(q_new - alpha * log_prob).mean()
+        
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+        
+        #==========================================
 
+        alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
+
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
         
