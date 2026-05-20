@@ -108,6 +108,12 @@ class SACAgent:
         self.target_entropy = -action_dim
         self.gamma = 0.99
         self.tau = 0.005
+        
+    def soft_update(self, net, target_net):
+        for param, target_param in zip(net.parameters(), target_net.parameters()):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
     def update(self, batch):
         state = torch.FloatTensor(batch['state'])
@@ -117,6 +123,8 @@ class SACAgent:
         done = torch.FloatTensor(batch['done'])
         
         #==========================================
+        
+        reward = torch.clamp(reward, -1.0, 1.0)
         
         with torch.no_grad():
             next_action, next_log_prob = self.actor.sample(next_state)
@@ -164,4 +172,9 @@ class SACAgent:
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
+        
+        #==========================================
+        
+        self.soft_update(self.critic1, self.critic1_target)
+        self.soft_update(self.critic2, self.critic2_target)
         
