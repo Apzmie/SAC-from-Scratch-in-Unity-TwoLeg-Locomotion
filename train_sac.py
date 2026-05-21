@@ -109,7 +109,7 @@ class SACAgent:
         self.gamma = 0.99
         self.tau = 0.005
         
-    def soft_update(self, net, target_net):
+    def update_target(self, net, target_net):
         for param, target_param in zip(net.parameters(), target_net.parameters()):
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
@@ -175,6 +175,6 @@ class SACAgent:
         
         #==========================================
         
-        self.soft_update(self.critic1, self.critic1_target)
-        self.soft_update(self.critic2, self.critic2_target)
+        self.update_target(self.critic1, self.critic1_target)
+        self.update_target(self.critic2, self.critic2_target)
         
