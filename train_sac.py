@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size=1e6, batch_size=256):
+    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
         self.max_size = max_size
         self.batch_size = batch_size
         self.ptr = 0
@@ -71,6 +71,10 @@ class PolicyNetwork(nn.Module):
         log_prob = log_prob.sum(dim=-1, keepdim=True)
 
         return action, log_prob
+        
+    def deterministic(self, x):
+        mean, _ = self.forward(x)
+        return torch.tanh(mean)
         
 
 class QNetwork(nn.Module):
@@ -177,4 +181,129 @@ class SACAgent:
         
         self.update_target(self.critic1, self.critic1_target)
         self.update_target(self.critic2, self.critic2_target)
+
+
+if __name__ == "__main__":
+    channel1 = EngineConfigurationChannel()
+    channel1.set_configuration_parameters(time_scale=20.0)
+    channel2 = EngineConfigurationChannel()
+    channel2.set_configuration_parameters(time_scale=20.0)
+    env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel1], no_graphics=True, worker_id=0)
+    test_env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel2], no_graphics=True, worker_id=1)
+    env.reset()
+    test_env.reset()
+    
+    behavior_name = list(env.behavior_specs.keys())[0]
+    t_behavior_name = list(test_env.behavior_specs.keys())[0]
+    spec = env.behavior_specs[behavior_name]
+    state_dim = spec.observation_specs[0].shape[0]
+    action_dim = spec.action_spec.continuous_size
+    agent = SACAgent(state_dim, action_dim)
+    buffer = ReplayBuffer(state_dim, action_dim)
+    writer = SummaryWriter(log_dir="a/")
+    
+    random_exploration_steps = 10000
+    learning_starts = 5000
+    test_interval = 100
+    test_max_step = 2000
+    
+    total_steps = 0
+    update_count = 0
+    best_test_score = -float('inf')
+    
+    while True:
+        decision_steps, terminal_steps = env.get_steps(behavior_name)
+
+        agent_ids = decision_steps.agent_id
+        if len(agent_ids) > 0:
+            states = np.array([decision_steps[aid].obs[0] for aid in agent_ids], dtype=np.float32)
+            states_tensor = torch.FloatTensor(states)   
+            
+            if total_steps < random_exploration_steps:
+                actions = np.random.uniform(low=-1.0, high=1.0, size=(len(agent_ids), action_dim)).astype(np.float32)
+            else:
+                with torch.no_grad():
+                    actions, _ = agent.actor.sample(states_tensor)   
+                actions = actions.cpu().numpy()
+                
+            actions_tuple = ActionTuple(continuous=actions)
+            env.set_actions(behavior_name, actions_tuple)
+            
+        env.step()
+        next_decision_steps, terminal_steps = env.get_steps(behavior_name)
         
+        for i, agent_id in enumerate(agent_ids):
+            state = states[i]
+            action = actions[i]
+
+            if agent_id in terminal_steps:
+                reward = terminal_steps[agent_id].reward
+                done = 1.0
+                next_state = np.zeros_like(state)
+            elif agent_id in next_decision_steps:
+                reward = next_decision_steps[agent_id].reward
+                done = 0.0
+                next_state = next_decision_steps[agent_id].obs[0]
+            else:
+                continue
+                
+            buffer.add(state, action, reward, next_state, done)
+            total_steps += 1
+         
+        if total_steps >= learning_starts:
+             batch = buffer.sample()
+             agent.update(batch)
+             update_count += 1
+             
+             if update_count % test_interval == 0:
+                 print(f"Update Count {update_count}")
+                 test_env.reset()
+                 t_decision_steps, _ = test_env.get_steps(t_behavior_name)
+                 n_test_agents = len(t_decision_steps.agent_id)
+                 test_rewards = np.zeros(n_test_agents)
+                 test_episode_dones = np.zeros(n_test_agents, dtype=bool)
+                 test_id_to_index = {agent_id: i for i, agent_id in enumerate(t_decision_steps.agent_id)}
+                 
+                 test_max_step_count = 0
+                 while not np.all(test_episode_dones) and test_max_step_count < test_max_step:
+                     t_agent_ids = t_decision_steps.agent_id
+                     
+                     if len(t_agent_ids) > 0:
+                         t_states = np.array([t_decision_steps[aid].obs[0] for aid in t_agent_ids], dtype=np.float32)
+                         t_states_tensor = torch.FloatTensor(t_states)
+                         
+                         with torch.no_grad():
+                             t_actions = agent.actor.deterministic(t_states_tensor)                    
+        
+                         t_actions = t_actions.cpu().numpy()
+                         t_actions_tuple = ActionTuple(continuous=t_actions)
+                         test_env.set_actions(t_behavior_name, t_actions_tuple)
+                         
+                     test_env.step()
+                     test_max_step_count += 1
+                     t_decision_steps, t_terminal_steps = test_env.get_steps(t_behavior_name)
+                     
+                     for j, agent_id in enumerate(t_terminal_steps.agent_id):
+                         i = test_id_to_index[agent_id]
+                         if not test_episode_dones[i]:
+                             test_rewards[i] += t_terminal_steps.reward[j]
+                             test_episode_dones[i] = True
+
+                     for j, agent_id in enumerate(t_decision_steps.agent_id):
+                         i = test_id_to_index[agent_id]
+                         if not test_episode_dones[i]:
+                             test_rewards[i] += t_decision_steps.reward[j]
+                             
+                 test_average_reward = np.mean(test_rewards)
+                 test_rewards_std = np.std(test_rewards)
+                 stability_score = test_average_reward - test_rewards_std 
+                         
+                 if stability_score > best_test_score:
+                     best_test_score = stability_score
+                     torch.save({
+                         "actor": agent.actor.state_dict(),
+                         "critic1": agent.critic1.state_dict(),
+                         "critic2": agent.critic2.state_dict(),
+                     }, "best_model.pth")
+                     print(f"[Test] Model saved as 'best_model.pth' at new best score {best_test_score:.4f}")        
+                         
