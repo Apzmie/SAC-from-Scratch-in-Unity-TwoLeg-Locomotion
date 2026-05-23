@@ -34,13 +34,13 @@ class ReplayBuffer:
     def sample(self):
         idx = np.random.randint(0, self.size, size=self.batch_size)
 
-        return dict(
-            state=self.state[idx],
-            action=self.action[idx],
-            reward=self.reward[idx],
-            next_state=self.next_state[idx],
-            done=self.done[idx]
-        )
+        return {
+            "state": self.state[idx],
+            "action": self.action[idx],
+            "reward": self.reward[idx],
+            "next_state": self.next_state[idx],
+            "done": self.done[idx],
+        }
         
 
 class PolicyNetwork(nn.Module):
