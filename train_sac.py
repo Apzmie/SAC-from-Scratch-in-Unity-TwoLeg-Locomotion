@@ -1,8 +1,12 @@
+from mlagents_envs.environment import UnityEnvironment
+from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+from mlagents_envs.base_env import ActionTuple
 import numpy as np
 import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 class ReplayBuffer:
     def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
@@ -128,8 +132,6 @@ class SACAgent:
         
         #==========================================
         
-        reward = torch.clamp(reward, -1.0, 1.0)
-        
         with torch.no_grad():
             next_action, next_log_prob = self.actor.sample(next_state)
             
@@ -148,13 +150,20 @@ class SACAgent:
         
         self.critic1_optimizer.zero_grad()
         critic1_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic1.parameters(), 1.0)
         self.critic1_optimizer.step()
         
         self.critic2_optimizer.zero_grad()
         critic2_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic2.parameters(), 1.0)
         self.critic2_optimizer.step()
         
         #==========================================
+        
+        for p in self.critic1.parameters():
+            p.requires_grad = False
+        for p in self.critic2.parameters():
+            p.requires_grad = False
         
         action_new, log_prob = self.actor.sample(state)
         
@@ -169,6 +178,11 @@ class SACAgent:
         actor_loss.backward()
         self.actor_optimizer.step()
         
+        for p in self.critic1.parameters():
+            p.requires_grad = True
+        for p in self.critic2.parameters():
+            p.requires_grad = True
+        
         #==========================================
 
         alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
@@ -181,6 +195,13 @@ class SACAgent:
         
         self.update_target(self.critic1, self.critic1_target)
         self.update_target(self.critic2, self.critic2_target)
+        
+        return {
+            "critic1_loss": critic1_loss.item(),
+            "critic2_loss": critic2_loss.item(),
+            "actor_loss": actor_loss.item(),
+            "alpha": self.log_alpha.exp().item(),
+        }
 
 
 if __name__ == "__main__":
@@ -252,8 +273,10 @@ if __name__ == "__main__":
          
         if total_steps >= learning_starts:
              batch = buffer.sample()
-             agent.update(batch)
-             update_count += 1
+             metrics = agent.update(batch) 
+             update_count += 1           
+             for k, v in metrics.items():
+                 writer.add_scalar(k, v, update_count)                 
              
              if update_count % test_interval == 0:
                  print(f"Update Count {update_count}")
@@ -296,7 +319,16 @@ if __name__ == "__main__":
                              
                  test_average_reward = np.mean(test_rewards)
                  test_rewards_std = np.std(test_rewards)
-                 stability_score = test_average_reward - test_rewards_std 
+                 stability_score = test_average_reward - test_rewards_std
+                 writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
+                 writer.add_scalar("Test/Stability_Score", stability_score, update_count)
+                 writer.add_scalar("Test/Min_Reward", np.min(test_rewards), update_count)
+                 print(f"{stability_score:.4f}")
+                 torch.save({
+                         "actor": agent.actor.state_dict(),
+                         "critic1": agent.critic1.state_dict(),
+                         "critic2": agent.critic2.state_dict(),
+                     }, "period_model.pth")
                          
                  if stability_score > best_test_score:
                      best_test_score = stability_score
