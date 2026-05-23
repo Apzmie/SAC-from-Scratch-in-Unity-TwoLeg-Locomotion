@@ -337,5 +337,4 @@ if __name__ == "__main__":
                          "critic1": agent.critic1.state_dict(),
                          "critic2": agent.critic2.state_dict(),
                      }, "best_model.pth")
-                     print(f"[Test] Model saved as 'best_model.pth' at new best score {best_test_score:.4f}")        
-                         
+                     print(f"[Test] Model saved as 'best_model.pth' at new best score {best_test_score:.4f}")
