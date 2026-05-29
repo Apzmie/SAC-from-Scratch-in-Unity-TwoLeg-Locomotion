@@ -220,6 +220,9 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = SACAgent(state_dim, action_dim)
+    #agent.actor.load_state_dict(torch.load("saved_model.pth")["actor"])
+    #agent.critic1.load_state_dict(torch.load("saved_model.pth")["critic1"])
+    #agent.critic2.load_state_dict(torch.load("saved_model.pth")["critic2"])
     buffer = ReplayBuffer(state_dim, action_dim)
     writer = SummaryWriter(log_dir="a/")
     
@@ -276,7 +279,7 @@ if __name__ == "__main__":
              metrics = agent.update(batch) 
              update_count += 1           
              for k, v in metrics.items():
-                 writer.add_scalar(k, v, update_count)                 
+                 writer.add_scalar(f"Train/{k}", v, update_count)            
              
              if update_count % test_interval == 0:
                  print(f"Update Count {update_count}")
