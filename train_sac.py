@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
+    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=128):
         self.max_size = max_size
         self.batch_size = batch_size
         self.ptr = 0
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     
     random_exploration_steps = 10000
     learning_starts = 5000
-    test_interval = 100
+    test_interval = 1000
     test_max_step = 2000
     
     total_steps = 0
@@ -240,7 +240,7 @@ if __name__ == "__main__":
 
         agent_ids = decision_steps.agent_id
         if len(agent_ids) > 0:
-            states = np.array([decision_steps[aid].obs[0] for aid in agent_ids], dtype=np.float32)
+            states = decision_steps.obs[0]
             states_tensor = torch.FloatTensor(states)   
             
             if total_steps < random_exploration_steps:
@@ -248,7 +248,7 @@ if __name__ == "__main__":
             else:
                 with torch.no_grad():
                     actions, _ = agent.actor.sample(states_tensor)   
-                actions = actions.cpu().numpy()
+                actions = actions.cpu().numpy().astype(np.float32)
                 
             actions_tuple = ActionTuple(continuous=actions)
             env.set_actions(behavior_name, actions_tuple)
@@ -279,7 +279,7 @@ if __name__ == "__main__":
              metrics = agent.update(batch) 
              update_count += 1           
              for k, v in metrics.items():
-                 writer.add_scalar(f"Train/{k}", v, update_count)            
+                 writer.add_scalar(f"Train/{k}", v, update_count)               
              
              if update_count % test_interval == 0:
                  print(f"Update Count {update_count}")
@@ -295,13 +295,17 @@ if __name__ == "__main__":
                      t_agent_ids = t_decision_steps.agent_id
                      
                      if len(t_agent_ids) > 0:
-                         t_states = np.array([t_decision_steps[aid].obs[0] for aid in t_agent_ids], dtype=np.float32)
-                         t_states_tensor = torch.FloatTensor(t_states)
-                         
+                         t_states = t_decision_steps.obs[0]
+                         t_states_tensor = torch.FloatTensor(t_states)                         
                          with torch.no_grad():
                              t_actions = agent.actor.deterministic(t_states_tensor)                    
-        
-                         t_actions = t_actions.cpu().numpy()
+                         t_actions = t_actions.cpu().numpy().astype(np.float32)
+                         
+                         for j, agent_id in enumerate(t_agent_ids):
+                             idx = test_id_to_index[agent_id]
+                             if test_episode_dones[idx]:
+                                 t_actions[j] = np.zeros(action_dim)
+                                
                          t_actions_tuple = ActionTuple(continuous=t_actions)
                          test_env.set_actions(t_behavior_name, t_actions_tuple)
                          
