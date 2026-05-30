@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=128):
+    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
         self.max_size = max_size
         self.batch_size = batch_size
         self.ptr = 0
@@ -44,7 +44,7 @@ class ReplayBuffer:
         
 
 class PolicyNetwork(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim=256):
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -82,7 +82,7 @@ class PolicyNetwork(nn.Module):
         
 
 class QNetwork(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim=256):
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
         super().__init__()
         self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
