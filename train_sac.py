@@ -6,42 +6,8 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter       
 
-class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
-        self.max_size = max_size
-        self.batch_size = batch_size
-        self.ptr = 0
-        self.size = 0
-
-        self.state = np.zeros((max_size, state_dim), dtype=np.float32)
-        self.next_state = np.zeros((max_size, state_dim), dtype=np.float32)
-        self.action = np.zeros((max_size, action_dim), dtype=np.float32)
-        self.reward = np.zeros((max_size, 1), dtype=np.float32)
-        self.done = np.zeros((max_size, 1), dtype=np.float32)
-
-    def add(self, state, action, reward, next_state, done):
-        self.state[self.ptr] = state
-        self.action[self.ptr] = action
-        self.reward[self.ptr] = reward
-        self.next_state[self.ptr] = next_state
-        self.done[self.ptr] = done
-
-        self.ptr = (self.ptr + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
-
-    def sample(self):
-        idx = np.random.randint(0, self.size, size=self.batch_size)
-
-        return {
-            "state": self.state[idx],
-            "action": self.action[idx],
-            "reward": self.reward[idx],
-            "next_state": self.next_state[idx],
-            "done": self.done[idx],
-        }
-        
 
 class PolicyNetwork(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=128):
@@ -95,6 +61,41 @@ class QNetwork(nn.Module):
         q = self.q(x)
         return q
         
+
+class ReplayBuffer:
+    def __init__(self, state_dim, action_dim, max_size=int(1e6), batch_size=256):
+        self.max_size = max_size
+        self.batch_size = batch_size
+        self.ptr = 0
+        self.size = 0
+
+        self.state = np.zeros((max_size, state_dim), dtype=np.float32)
+        self.next_state = np.zeros((max_size, state_dim), dtype=np.float32)
+        self.action = np.zeros((max_size, action_dim), dtype=np.float32)
+        self.reward = np.zeros((max_size, 1), dtype=np.float32)
+        self.done = np.zeros((max_size, 1), dtype=np.float32)
+
+    def add(self, state, action, reward, next_state, done):
+        self.state[self.ptr] = state
+        self.action[self.ptr] = action
+        self.reward[self.ptr] = reward
+        self.next_state[self.ptr] = next_state
+        self.done[self.ptr] = done
+
+        self.ptr = (self.ptr + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+    def sample(self):
+        idx = np.random.randint(0, self.size, size=self.batch_size)
+
+        return {
+            "state": self.state[idx],
+            "action": self.action[idx],
+            "reward": self.reward[idx],
+            "next_state": self.next_state[idx],
+            "done": self.done[idx],
+        }
+        
         
 class SACAgent:
     def __init__(self, state_dim, action_dim, lr=3e-4):
@@ -105,6 +106,13 @@ class SACAgent:
         self.critic2_target = QNetwork(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
         self.critic2_target.load_state_dict(self.critic2.state_dict())
+        
+        #==========================================        
+        #state_dict = torch.load("saved_model.pth")
+        #self.actor.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
+        #self.actor.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
+        #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        #==========================================
         
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
         self.critic1_optimizer = torch.optim.Adam(self.critic1.parameters(), lr=lr)
@@ -220,9 +228,7 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = SACAgent(state_dim, action_dim)
-    #agent.actor.load_state_dict(torch.load("saved_model.pth")["actor"])
-    #agent.critic1.load_state_dict(torch.load("saved_model.pth")["critic1"])
-    #agent.critic2.load_state_dict(torch.load("saved_model.pth")["critic2"])
+    #agent.actor.load_state_dict(torch.load("saved_model.pth"))
     buffer = ReplayBuffer(state_dim, action_dim)
     writer = SummaryWriter(log_dir="a/")
     
@@ -331,17 +337,9 @@ if __name__ == "__main__":
                  writer.add_scalar("Test/Stability_Score", stability_score, update_count)
                  writer.add_scalar("Test/Min_Reward", np.min(test_rewards), update_count)
                  print(f"{stability_score:.4f}")
-                 torch.save({
-                         "actor": agent.actor.state_dict(),
-                         "critic1": agent.critic1.state_dict(),
-                         "critic2": agent.critic2.state_dict(),
-                     }, "period_model.pth")
+                 torch.save(agent.actor.state_dict(), "period_model.pth")
                          
                  if stability_score > best_test_score:
                      best_test_score = stability_score
-                     torch.save({
-                         "actor": agent.actor.state_dict(),
-                         "critic1": agent.critic1.state_dict(),
-                         "critic2": agent.critic2.state_dict(),
-                     }, "best_model.pth")
+                     torch.save(agent.actor.state_dict(), "best_model.pth")
                      print(f"[Test] Model saved as 'best_model.pth' at new best score {best_test_score:.4f}")
