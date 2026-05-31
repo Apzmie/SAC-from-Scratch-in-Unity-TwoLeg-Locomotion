@@ -77,13 +77,67 @@ class PPOAgent:
         self.gamma = gamma
         self.lam = lam
         
-        #==========================================
+        ###########################################
+        ### Load fc1, fc2, mean ###
+        ###########################################
+        
         #state_dict = torch.load("saved_model.pth")
         #self.actor_critic.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.actor_critic.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
         #self.actor_critic.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        
         #==========================================
-          
+        
+        ###########################################
+        ### Freeze Actor ###
+        ###########################################
+        
+        #for name, param in self.actor_critic.named_parameters():
+        #    if "critic" not in name:
+        #        param.requires_grad = False
+        
+        #self.optimizer = torch.optim.Adam(
+        #    filter(lambda p: p.requires_grad, self.actor_critic.parameters()), 
+        #    lr=lr
+        #)
+        
+        #==========================================
+        
+        ###########################################
+        ### Add Observation ###
+        ###########################################
+        
+        #old_state_dim = ?     
+        #old_model = ActorCritic(old_state_dim, action_dim)
+        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
+        
+        #with torch.no_grad():
+        #    self.actor_critic.fc1.weight[:, :old_state_dim].copy_(old_model.fc1.weight)
+        #    self.actor_critic.fc1.bias.copy_(old_model.fc1.bias)
+        #    self.actor_critic.fc1.weight[:, old_state_dim:].zero_()
+        
+        #==========================================
+        
+        ###########################################
+        ### Add Action ###
+        ###########################################
+        
+        #old_action_dim = ?
+        #old_model = ActorCritic(state_dim, old_action_dim)
+        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
+
+        #with torch.no_grad():
+        #    self.actor_critic.mean.weight[:old_action_dim].copy_(old_model.mean.weight)
+        #    self.actor_critic.mean.bias[:old_action_dim].copy_(old_model.mean.bias)
+
+        #    self.actor_critic.mean.weight[old_action_dim:].zero_()
+        #    self.actor_critic.mean.bias[old_action_dim:].zero_()
+        
+        #    self.actor_critic.log_std[:old_action_dim].copy_(old_model.log_std)
+        #    self.actor_critic.log_std[old_action_dim:].fill_(-2.0)
+        
+        #==========================================
+
         self.optimizer = torch.optim.Adam(self.actor_critic.parameters(), lr=lr)
         
     def compute_gaes(self, buffer):
