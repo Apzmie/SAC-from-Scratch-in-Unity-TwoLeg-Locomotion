@@ -179,9 +179,9 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = PPOAgent(state_dim, action_dim)
-    #agent.actor_critic.load_state_dict(torch.load("saved_model.pth"))
+    #agent.actor.load_state_dict(torch.load("saved_model.pth"))
     buffer = RolloutBuffer()
-    writer = SummaryWriter(log_dir="a/")
+    writer = SummaryWriter(log_dir="")
     
     target_transitions = 3072    # all transitions per one update
     test_interval = 5
@@ -201,16 +201,13 @@ if __name__ == "__main__":
             for agent_id in agent_ids:
                 if agent_id not in agent_buffers:
                     agent_buffers[agent_id] = RolloutBuffer()
-
-            states = decision_steps.obs[0]
-            states_tensor = torch.FloatTensor(states)
-            
+                    
+            states_tensor = torch.from_numpy(decision_steps.obs[0]).to(torch.float32)           
             with torch.no_grad():
                 actions, log_probs, values = agent.actor_critic.sample(states_tensor)
                   
             actions = actions.cpu().numpy().astype(np.float32)
-            actions_tuple = ActionTuple(continuous=actions)  
-            env.set_actions(behavior_name, actions_tuple)           
+            env.set_actions(behavior_name, ActionTuple(continuous=actions))           
 
         env.step()
         next_decision_steps, terminal_steps = env.get_steps(behavior_name)
@@ -270,8 +267,7 @@ if __name__ == "__main__":
                     t_agent_ids = t_decision_steps.agent_id
         
                     if len(t_agent_ids) > 0:
-                        t_states = t_decision_steps.obs[0]
-                        t_states_tensor = torch.FloatTensor(t_states)
+                        t_states_tensor = torch.from_numpy(t_decision_steps.obs[0]).to(torch.float32)
                         with torch.no_grad():
                             t_actions = agent.actor_critic.deterministic(t_states_tensor)
                         t_actions = t_actions.cpu().numpy().astype(np.float32)
@@ -281,8 +277,7 @@ if __name__ == "__main__":
                             if test_episode_dones[idx]:
                                 t_actions[j] = np.zeros(action_dim)
                         
-                        t_actions_tuple = ActionTuple(continuous=t_actions)  
-                        test_env.set_actions(t_behavior_name, t_actions_tuple)  
+                        test_env.set_actions(t_behavior_name, ActionTuple(continuous=t_actions))  
                        
                     test_env.step()
                     test_max_step_count += 1
