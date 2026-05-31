@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
+
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=128):
         super().__init__()
@@ -74,7 +75,15 @@ class PPOAgent:
     def __init__(self, state_dim, action_dim, lr=3e-4, gamma=0.99, lam=0.95):
         self.actor_critic = ActorCritic(state_dim, action_dim)
         self.gamma = gamma
-        self.lam = lam  
+        self.lam = lam
+        
+        #==========================================
+        #state_dict = torch.load("saved_model.pth")
+        #self.actor_critic.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
+        #self.actor_critic.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
+        #self.actor_critic.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        #==========================================
+          
         self.optimizer = torch.optim.Adam(self.actor_critic.parameters(), lr=lr)
         
     def compute_gaes(self, buffer):
@@ -170,6 +179,7 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = PPOAgent(state_dim, action_dim)
+    #agent.actor_critic.load_state_dict(torch.load("saved_model.pth"))
     buffer = RolloutBuffer()
     writer = SummaryWriter(log_dir="a/")
     
