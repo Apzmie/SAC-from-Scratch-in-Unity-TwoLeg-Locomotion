@@ -107,11 +107,67 @@ class SACAgent:
         self.critic1_target.load_state_dict(self.critic1.state_dict())
         self.critic2_target.load_state_dict(self.critic2.state_dict())
         
-        #==========================================        
-        #state_dict = torch.load("saved_model.pth")
+        ###########################################
+        ### Load Actor (fc1, fc2, mean), Critic ###
+        ###########################################
+        
+        #state_dict = torch.load("saved_actor.pth")
         #self.actor.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.actor.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
-        #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})        
+        #self.actor.log_std.weight.zero_()
+        #self.actor.log_std.bias.fill_(-2)
+        
+        #state_dict = torch.load("saved_critic.pth")
+        #self.critic1.load_state_dict(state_dict["critic1"])
+        #self.critic2.load_state_dict(state_dict["critic2"])
+        
+        #==========================================
+        
+        ###########################################
+        ### Freeze Actor ###
+        ###########################################
+        
+        #for param in self.actor.parameters():
+        #    param.requires_grad = False
+        
+        #self.actor_optimizer = None
+        
+        #==========================================
+        
+        ###########################################
+        ### Add Observation ###
+        ###########################################
+        
+        #old_state_dim = ?     
+        #old_model = PolicyNetwork(old_state_dim, action_dim)
+        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
+        
+        #with torch.no_grad():
+        #    self.actor.fc1.weight[:, :old_state_dim].copy_(old_model.fc1.weight)
+        #    self.actor.fc1.bias.copy_(old_model.fc1.bias)
+        #    self.actor.fc1.weight[:, old_state_dim:].zero_()
+        
+        #==========================================
+        
+        ###########################################
+        ### Add Action ###
+        ###########################################
+        
+        #old_action_dim = ?
+        #old_model = PolicyNetwork(state_dim, old_action_dim)
+        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
+
+        #with torch.no_grad():
+        #    self.actor.mean.weight[:old_action_dim].copy_(old_model.mean.weight)
+        #    self.actor.mean.bias[:old_action_dim].copy_(old_model.mean.bias)
+
+        #    self.actor.mean.weight[old_action_dim:].zero_()
+        #    self.actor.mean.bias[old_action_dim:].zero_()
+        
+        #    self.actor.log_std[:old_action_dim].copy_(old_model.log_std)
+        #    self.actor.log_std[old_action_dim:].zero_()
+        
         #==========================================
         
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
@@ -126,10 +182,11 @@ class SACAgent:
         self.tau = 0.005
         
     def update_target(self, net, target_net):
-        for param, target_param in zip(net.parameters(), target_net.parameters()):
-            target_param.data.copy_(
-                self.tau * param.data + (1 - self.tau) * target_param.data
-            )
+        with torch.no_grad():
+            for param, target_param in zip(net.parameters(), target_net.parameters()):
+                target_param.copy_(
+                    self.tau * param + (1 - self.tau) * target_param
+                )
 
     def update(self, batch):
         state = torch.FloatTensor(batch['state'])
@@ -334,6 +391,7 @@ if __name__ == "__main__":
                  writer.add_scalar("Test/Min_Reward", np.min(test_rewards), update_count)
                  print(f"{stability_score:.4f}")
                  torch.save(agent.actor.state_dict(), "period_model.pth")
+                 #torch.save({"critic1": critic1.state_dict(), "critic2": critic2.state_dict()}, "period_model.pth")
                          
                  if stability_score > best_test_score:
                      best_test_score = stability_score
