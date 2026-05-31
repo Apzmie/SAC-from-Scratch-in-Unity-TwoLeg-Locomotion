@@ -230,7 +230,7 @@ if __name__ == "__main__":
     agent = SACAgent(state_dim, action_dim)
     #agent.actor.load_state_dict(torch.load("saved_model.pth"))
     buffer = ReplayBuffer(state_dim, action_dim)
-    writer = SummaryWriter(log_dir="a/")
+    writer = SummaryWriter(log_dir="")
     
     random_exploration_steps = 10000
     learning_starts = 5000
@@ -246,8 +246,7 @@ if __name__ == "__main__":
 
         agent_ids = decision_steps.agent_id
         if len(agent_ids) > 0:
-            states = decision_steps.obs[0]
-            states_tensor = torch.FloatTensor(states)   
+            states_tensor = torch.from_numpy(decision_steps.obs[0]).to(torch.float32)  
             
             if total_steps < random_exploration_steps:
                 actions = np.random.uniform(low=-1.0, high=1.0, size=(len(agent_ids), action_dim)).astype(np.float32)
@@ -256,8 +255,7 @@ if __name__ == "__main__":
                     actions, _ = agent.actor.sample(states_tensor)   
                 actions = actions.cpu().numpy().astype(np.float32)
                 
-            actions_tuple = ActionTuple(continuous=actions)
-            env.set_actions(behavior_name, actions_tuple)
+            env.set_actions(behavior_name, ActionTuple(continuous=actions))
             
         env.step()
         next_decision_steps, terminal_steps = env.get_steps(behavior_name)
@@ -301,8 +299,7 @@ if __name__ == "__main__":
                      t_agent_ids = t_decision_steps.agent_id
                      
                      if len(t_agent_ids) > 0:
-                         t_states = t_decision_steps.obs[0]
-                         t_states_tensor = torch.FloatTensor(t_states)                         
+                         t_states_tensor = torch.from_numpy(t_decision_steps.obs[0]).to(torch.float32)                        
                          with torch.no_grad():
                              t_actions = agent.actor.deterministic(t_states_tensor)                    
                          t_actions = t_actions.cpu().numpy().astype(np.float32)
@@ -312,8 +309,7 @@ if __name__ == "__main__":
                              if test_episode_dones[idx]:
                                  t_actions[j] = np.zeros(action_dim)
                                 
-                         t_actions_tuple = ActionTuple(continuous=t_actions)
-                         test_env.set_actions(t_behavior_name, t_actions_tuple)
+                         test_env.set_actions(t_behavior_name, ActionTuple(continuous=t_actions))
                          
                      test_env.step()
                      test_max_step_count += 1
