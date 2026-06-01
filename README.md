@@ -18,6 +18,8 @@ log probabilities can be positive in continuous action spaces because they are c
 ## SAC Diagram
 ![sac_diagram](images/sac_diagram.png)
 
+### Q-role difference in SAC vs DQN
+
 ## Training Progress (SAC plot)
 
 ## Conclusion
