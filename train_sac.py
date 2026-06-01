@@ -292,7 +292,7 @@ if __name__ == "__main__":
     random_exploration_steps = 10000
     learning_starts = 5000
     test_interval = 1000
-    test_max_step = 2000
+    test_max_step = 1000
     
     total_steps = 0
     update_count = 0
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         next_decision_steps, terminal_steps = env.get_steps(behavior_name)
         
         for i, agent_id in enumerate(agent_ids):
-            state = states[i]
+            state = states_tensor[i].cpu().numpy()
             action = actions[i]
 
             if agent_id in terminal_steps:
