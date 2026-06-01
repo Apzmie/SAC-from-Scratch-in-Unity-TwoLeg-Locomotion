@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim=128):
+    def __init__(self, state_dim, action_dim, hidden_dim=256):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -36,7 +36,7 @@ class ActorCritic(nn.Module):
         log_prob = log_prob - torch.log(1 - action.pow(2) + 1e-6)
         log_prob = log_prob.sum(dim=-1, keepdim=True)
 
-        return action, log_prob, value
+        return action, z, log_prob, value
         
     def deterministic(self, x):
         mean, _, _ = self.forward(x)
@@ -47,6 +47,7 @@ class RolloutBuffer:
     def __init__(self):
         self.states = []
         self.actions = []
+        self.zs = []
         self.rewards = []
         self.next_states = []
         self.log_probs = []
@@ -55,9 +56,10 @@ class RolloutBuffer:
         self.returns = []
         self.advantages = []
 
-    def add(self, state, action, reward, next_state, log_prob, value, done):
+    def add(self, state, action, z, reward, next_state, log_prob, value, done):
         self.states.append(state)
         self.actions.append(action)
+        self.zs.append(z)
         self.rewards.append(reward)
         self.next_states.append(next_state)
         self.log_probs.append(log_prob)
@@ -167,20 +169,20 @@ class PPOAgent:
 
     def update(self, buffers, epochs=5, batch_size=512):
         all_states = []
-        all_actions = []
+        all_zs = []
         all_old_log_probs = []
         all_returns = []
         all_advantages = []
         
         for buf in buffers:
             all_states.extend(buf.states)
-            all_actions.extend(buf.actions)
+            all_zs.extend(buf.zs)
             all_old_log_probs.extend(buf.log_probs)
             all_returns.append(buf.returns)
             all_advantages.append(buf.advantages)
             
         states = torch.FloatTensor(np.array(all_states))
-        actions = torch.FloatTensor(np.array(all_actions))
+        zs = torch.FloatTensor(np.array(all_zs))
         old_log_probs = torch.FloatTensor(np.array(all_old_log_probs))
         returns = torch.cat(all_returns).view(-1)
         advantages = torch.cat(all_advantages).view(-1)
@@ -198,7 +200,9 @@ class PPOAgent:
                 
                 mean, std, values = self.actor_critic(states[idx])
                 dist = torch.distributions.Normal(mean, std)
-                log_probs = dist.log_prob(actions[idx]).sum(-1)
+                log_probs = dist.log_prob(zs[idx])
+                log_probs = log_probs - torch.log(1 - torch.tanh(zs[idx]).pow(2) + 1e-6)
+                log_probs = log_probs.sum(dim=-1)
                 entropy = dist.entropy().sum(-1)
                 
                 ratios = torch.exp(log_probs - old_log_probs[idx])
@@ -233,13 +237,13 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = PPOAgent(state_dim, action_dim)
-    #agent.actor.load_state_dict(torch.load("saved_model.pth"))
+    #agent.actor_critic.load_state_dict(torch.load("saved_model.pth"))
     buffer = RolloutBuffer()
     writer = SummaryWriter(log_dir="")
     
     target_transitions = 3072    # all transitions per one update
     test_interval = 5
-    test_max_step = 2000
+    test_max_step = 1000
 
     update_count = 0
     total_transitions = 0
@@ -258,7 +262,7 @@ if __name__ == "__main__":
                     
             states_tensor = torch.from_numpy(decision_steps.obs[0]).to(torch.float32)           
             with torch.no_grad():
-                actions, log_probs, values = agent.actor_critic.sample(states_tensor)
+                actions, zs, log_probs, values = agent.actor_critic.sample(states_tensor)
                   
             actions = actions.cpu().numpy().astype(np.float32)
             env.set_actions(behavior_name, ActionTuple(continuous=actions))           
@@ -267,10 +271,11 @@ if __name__ == "__main__":
         next_decision_steps, terminal_steps = env.get_steps(behavior_name)
 
         for i, agent_id in enumerate(agent_ids):
-            state = states[i]
+            state = states_tensor[i].cpu().numpy()
             action = actions[i]
             log_prob = log_probs[i]
             value = values[i]
+            z = zs[i].cpu().numpy()
 
             if agent_id in terminal_steps:
                 reward = terminal_steps[agent_id].reward
@@ -283,7 +288,7 @@ if __name__ == "__main__":
             else:
                 continue
 
-            agent_buffers[agent_id].add(state, action, reward, next_state, log_prob.item(), value.item(), done)
+            agent_buffers[agent_id].add(state, action, z, reward, next_state, log_prob.item(), value.item(), done)
             total_transitions += 1
 
             if done == 1.0:
