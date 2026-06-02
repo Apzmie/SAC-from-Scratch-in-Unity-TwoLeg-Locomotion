@@ -1,10 +1,6 @@
 # Under-Construction
 
-self.target_entropy = -action_dim
 
-alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
-
-log probabilities can be positive in continuous action spaces because they are computed from probability density functions rather than discrete probabilities. Because the log probabilities are summed over action dimensions in the neural network, the total log probability can readily exceed 16 when the target entropy is set to -16, which can cause alpha to increase. If the target entropy is set to plus sign, alpha increases even in situations where it should decrease, leading to excessively high randomness.
 
 ## Environment
 ### Unity
@@ -18,7 +14,11 @@ log probabilities can be positive in continuous action spaces because they are c
 ## SAC Diagram
 ![sac_diagram](images/sac_diagram.png)
 
-### Q-role difference in SAC vs DQN
+### Q-role Difference in DQN vs SAC
+In DQN, Q-values are used to select actions via argmax. In SAC, Q-values are used to train both the critic and the actor, while actions are sampled from the stochastic policy (actor). Although DQN can take both the state and action as inputs to estimate a Q-value like SAC, it typically takes only the state as input because this enables a direct argmax operation over the Q-values of all possible actions.
+
+### Alpha Loss
+Log probabilities can be positive in continuous action spaces because they are computed from probability density functions rather than discrete probabilities. Since log probabilities are summed over action dimensions, the total log probability can become a large positive value, which may cause alpha to increase. If the target entropy is set with a positive sign, alpha may increase even when it should decrease, leading to excessively high randomness.
 
 ## Training Progress (SAC plot)
 
