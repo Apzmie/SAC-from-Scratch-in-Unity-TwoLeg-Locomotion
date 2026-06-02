@@ -20,6 +20,9 @@ In DQN, Q-values are used to select actions via argmax. In SAC, Q-values are use
 ### Alpha Loss
 Log probabilities can be positive in continuous action spaces because they are computed from probability density functions rather than discrete probabilities. Since log probabilities are summed over action dimensions, the total log probability can become a large positive value, which may cause alpha to increase. If the target entropy is set with a positive sign, alpha may increase even when it should decrease, leading to excessively high randomness.
 
+### Actor Loss
+The Q-value used in the actor loss is computed using a newly sampled action from the current policy given the state, rather than the action stored in the replay buffer. This is because the actor should be updated to produce actions that the current critic evaluates highly. The actions stored in the replay buffer are simply records of past transitions and are used during the critic update to learn from past experience.
+
 ## Training Progress (SAC plot)
 
 ## Conclusion
