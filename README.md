@@ -23,6 +23,10 @@ Log probabilities can be positive in continuous action spaces because they are c
 ### Actor Loss
 The Q-value used in the actor loss is computed using a newly sampled action from the current policy given the state, rather than the action stored in the replay buffer. This is because the actor should be updated to produce actions that the current critic evaluates highly. The actions stored in the replay buffer are simply records of past transitions and are used during the critic update to learn from past experience.
 
+The objective of the actor loss is to increase both Q-value and entropy. However, increasing the Q-value tends to make the policy concentrate on specific actions, which reduces entropy, so the two objectives are in conflict. Therefore, the actor learns a policy that finds a balance between maximizing both factors.
+
+Entropy maximization affects not only the actor loss but also all other losses, making the policy distribution soft.
+
 ## Training Progress (SAC plot)
 
 ## Conclusion
