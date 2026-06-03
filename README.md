@@ -29,4 +29,6 @@ Entropy maximization affects not only the actor loss but also all other losses, 
 
 ## Training Progress (SAC plot)
 
+The previous stability score method, which saves the model using the mean and variance of rewards, has a problem. Even when the policy improves and the reward increases, the score can still go down because of the variance, so better policies cannot be saved. Because small simulation noise makes agents behave differently with the same neural network, the variance in this case does not correspond to real changes in behavior, so it is not a good criterion for saving the model.
+
 ## Conclusion
