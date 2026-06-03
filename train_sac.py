@@ -296,7 +296,7 @@ if __name__ == "__main__":
     
     total_steps = 0
     update_count = 0
-    best_test_score = -float('inf')
+    best_test_reward = -float('inf')
     
     while True:
         decision_steps, terminal_steps = env.get_steps(behavior_name)
@@ -384,16 +384,12 @@ if __name__ == "__main__":
                              test_rewards[i] += t_decision_steps.reward[j]
                              
                  test_average_reward = np.mean(test_rewards)
-                 test_rewards_std = np.std(test_rewards)
-                 stability_score = test_average_reward - test_rewards_std
                  writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
-                 writer.add_scalar("Test/Stability_Score", stability_score, update_count)
-                 writer.add_scalar("Test/Min_Reward", np.min(test_rewards), update_count)
-                 print(f"{stability_score:.4f}")
+                 print(f"{test_average_reward:.4f}")
                  torch.save(agent.actor.state_dict(), "period_model.pth")
                  #torch.save({"critic1": critic1.state_dict(), "critic2": critic2.state_dict()}, "period_model.pth")
                          
-                 if stability_score > best_test_score:
-                     best_test_score = stability_score
+                 if test_average_reward > best_test_reward:
+                     best_test_reward = test_average_reward
                      torch.save(agent.actor.state_dict(), "best_model.pth")
-                     print(f"[Test] Model saved as 'best_model.pth' at new best score {best_test_score:.4f}")
+                     print(f"[Test] Model saved as 'best_model.pth' at new best reward {best_test_reward:.4f}")
