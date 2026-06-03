@@ -356,9 +356,9 @@ if __name__ == "__main__":
                 test_average_reward = np.mean(test_rewards)            
                 writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
                 print(f"{test_average_reward:.4f}")
-                torch.save(agent.actor_critic.state_dict(), "/home/psh/Two/a/period_model.pth")
+                torch.save(agent.actor_critic.state_dict(), "period_model.pth")
                 
                 if test_average_reward > best_test_reward:
                     best_test_reward = test_average_reward
-                    torch.save(agent.actor_critic.state_dict(), "/home/psh/Two/a/best_model.pth")
+                    torch.save(agent.actor_critic.state_dict(), "best_model.pth")
                     print(f"[Test] Model saved as 'best_model.pth' at new best reward {best_test_reward:.4f}")
