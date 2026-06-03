@@ -31,4 +31,6 @@ Entropy maximization affects not only the actor loss but also all other losses, 
 
 The previous stability score method, which saves the model using the mean and variance of rewards, has a problem. Even when the policy improves and the reward increases, the score can still go down because of the variance, so better policies cannot be saved. Because small simulation noise makes agents behave differently with the same neural network, the variance in this case does not correspond to real changes in behavior, so it is not a good criterion for saving the model.
 
+The previous actor freeze method, where the critic is trained first, has a problem. In the previous project, I trained it for a short time, and in this project I tried training it for longer. However, the critic loss does not steadily decrease and instead continuously oscillates up and down. This is because the critic's target is continuously re-estimated by its own prediction (next value), so it is just a waste of time.
+
 ## Conclusion
