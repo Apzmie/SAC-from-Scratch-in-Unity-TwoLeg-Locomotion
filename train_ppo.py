@@ -91,21 +91,6 @@ class PPOAgent:
         #==========================================
         
         ###########################################
-        ### Freeze Actor ###
-        ###########################################
-        
-        #for name, param in self.actor_critic.named_parameters():
-        #    if "critic" not in name:
-        #        param.requires_grad = False
-        
-        #self.optimizer = torch.optim.Adam(
-        #    filter(lambda p: p.requires_grad, self.actor_critic.parameters()), 
-        #    lr=lr
-        #)
-        
-        #==========================================
-        
-        ###########################################
         ### Add Observation ###
         ###########################################
         
