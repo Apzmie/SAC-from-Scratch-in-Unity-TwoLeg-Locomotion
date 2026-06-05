@@ -108,7 +108,7 @@ class SACAgent:
         self.critic2_target.load_state_dict(self.critic2.state_dict())
         
         ###########################################
-        ### Load Actor (fc1, fc2, mean), Critic ###
+        ### Load Actor (fc1, fc2, mean) ###
         ###########################################
         
         #state_dict = torch.load("saved_actor.pth")
@@ -117,10 +117,6 @@ class SACAgent:
         #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})        
         #self.actor.log_std.weight.zero_()
         #self.actor.log_std.bias.fill_(-2)
-        
-        #state_dict = torch.load("saved_critic.pth")
-        #self.critic1.load_state_dict(state_dict["critic1"])
-        #self.critic2.load_state_dict(state_dict["critic2"])
         
         #==========================================
         
@@ -376,7 +372,6 @@ if __name__ == "__main__":
                  writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
                  print(f"{test_average_reward:.4f}")
                  torch.save(agent.actor.state_dict(), "period_model.pth")
-                 #torch.save({"critic1": critic1.state_dict(), "critic2": critic2.state_dict()}, "period_model.pth")
                          
                  if test_average_reward > best_test_reward:
                      best_test_reward = test_average_reward
