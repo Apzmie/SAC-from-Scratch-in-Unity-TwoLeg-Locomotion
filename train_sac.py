@@ -111,12 +111,13 @@ class SACAgent:
         ### Load Actor (fc1, fc2, mean) ###
         ###########################################
         
-        #state_dict = torch.load("saved_actor.pth")
+        #state_dict = torch.load("saved_model.pth")
         #self.actor.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.actor.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
-        #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})        
-        #self.actor.log_std.weight.zero_()
-        #self.actor.log_std.bias.fill_(-2)
+        #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        #with torch.no_grad(): 
+        #    self.actor.log_std.weight.zero_()
+        #    self.actor.log_std.bias.fill_(-2)
         
         #==========================================
         
