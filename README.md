@@ -32,7 +32,7 @@ The previous stability score method, which saves the model using the mean and va
 
 The previous actor freeze method, where the critic is trained first, has a problem. In the previous project, I trained it for a short time, and in this project I tried training it for longer. However, the critic loss does not steadily decrease and instead continuously oscillates up and down because the critic's target is continuously re-estimated by its own prediction (next value), so it is just a waste of time. Despite this instability in the critic, training the actor and critic simultaneously keeps the critic stable because the actor continuously generates new data, so errors on the same data do not accumulate over time, and the critic can improve its approximation through short training on the same data.
 
-## Adding Observations/Actions
+## Observation/Action Expansion
 
 I think PPO is more suitable than ES or SAC when further training from a saved model after adding new observations or actions.
 
