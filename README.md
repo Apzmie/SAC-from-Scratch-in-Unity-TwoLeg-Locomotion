@@ -1,7 +1,6 @@
 # Under-Construction
 
 
-
 ## Environment
 ### Unity
 - Unity Editor: 6000.3.0f1
@@ -32,5 +31,15 @@ Entropy maximization affects not only the actor loss but also all other losses, 
 The previous stability score method, which saves the model using the mean and variance of rewards, has a problem. Even when the policy improves and the reward increases, the score can still go down because of the variance, so better policies cannot be saved. Because small simulation noise makes agents behave differently with the same neural network, the variance in this case does not correspond to real changes in behavior, so it is not a good criterion for saving the model.
 
 The previous actor freeze method, where the critic is trained first, has a problem. In the previous project, I trained it for a short time, and in this project I tried training it for longer. However, the critic loss does not steadily decrease and instead continuously oscillates up and down because the critic's target is continuously re-estimated by its own prediction (next value), so it is just a waste of time. Despite this instability in the critic, training the actor and critic simultaneously keeps the critic stable because the actor continuously generates new data, so errors on the same data do not accumulate over time, and the critic can improve its approximation through short training on the same data.
+
+## Adding Observations/Actions
+
+I think PPO is more suitable than ES or SAC when further training from a saved model after adding new observations or actions.
+
+For SAC -> SAC, the dimensions of observations or actions stored in the replay buffer do not match those of the newly collected data. For ES/PPO -> SAC, even if a well-pretrained model is loaded, expanding the parameters corresponding to newly added observations or actions forces the agent to explore sufficiently due to entropy maximization, so it may not provide a substantial advantage over training SAC from the beginning.
+
+For ES, because parameter updates are based on random noise rather than real gradients, it is difficult to adjust individual parameters in a targeted and meaningful way, so it may not provide a substantial advantage over training ES from the beginning.
+
+In contrast, PPO performs gradient-based optimization, allowing parameters to be adjusted in meaningful directions. Moreover, the clipping mechanism constrains large policy updates, helping the new policy remain close to the previous one even while exploring.
 
 ## Conclusion
