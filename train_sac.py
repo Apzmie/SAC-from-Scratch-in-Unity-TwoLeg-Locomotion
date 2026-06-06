@@ -109,50 +109,18 @@ class SACAgent:
         
         ###########################################
         ### Load Actor (fc1, fc2, mean) ###
+        # Set random_exploration_steps to 0, learning_starts to the minimum
         ###########################################
         
-        #state_dict = torch.load("saved_model.pth")
+        #state_dict = torch.load("best_model.pth")
         #self.actor.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.actor.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
         #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
-        #with torch.no_grad(): 
+        
+        #with torch.no_grad():        
         #    self.actor.log_std.weight.zero_()
-        #    self.actor.log_std.bias.fill_(-2)
-        
-        #==========================================
-        
-        ###########################################
-        ### Add Observation ###
-        ###########################################
-        
-        #old_state_dim = ?     
-        #old_model = PolicyNetwork(old_state_dim, action_dim)
-        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
-        
-        #with torch.no_grad():
-        #    self.actor.fc1.weight[:, :old_state_dim].copy_(old_model.fc1.weight)
-        #    self.actor.fc1.bias.copy_(old_model.fc1.bias)
-        #    self.actor.fc1.weight[:, old_state_dim:].zero_()
-        
-        #==========================================
-        
-        ###########################################
-        ### Add Action ###
-        ###########################################
-        
-        #old_action_dim = ?
-        #old_model = PolicyNetwork(state_dim, old_action_dim)
-        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
-
-        #with torch.no_grad():
-        #    self.actor.mean.weight[:old_action_dim].copy_(old_model.mean.weight)
-        #    self.actor.mean.bias[:old_action_dim].copy_(old_model.mean.bias)
-
-        #    self.actor.mean.weight[old_action_dim:].zero_()
-        #    self.actor.mean.bias[old_action_dim:].zero_()
-        
-        #    self.actor.log_std[:old_action_dim].copy_(old_model.log_std)
-        #    self.actor.log_std[old_action_dim:].zero_()
+        #    self.actor.log_std.bias.fill_(-2)        
+        #self.log_alpha = nn.Parameter(torch.tensor([-9.0]))
         
         #==========================================
         
@@ -255,6 +223,59 @@ class SACAgent:
         }
 
 
+def save_checkpoint(path, agent, buffer):
+    torch.save({
+        "actor": agent.actor.state_dict(),
+        "critic1": agent.critic1.state_dict(),
+        "critic2": agent.critic2.state_dict(),
+        "critic1_target": agent.critic1_target.state_dict(),
+        "critic2_target": agent.critic2_target.state_dict(),
+
+        "actor_optimizer": agent.actor_optimizer.state_dict(),
+        "critic1_optimizer": agent.critic1_optimizer.state_dict(),
+        "critic2_optimizer": agent.critic2_optimizer.state_dict(),
+        "alpha_optimizer": agent.alpha_optimizer.state_dict(),
+
+        "log_alpha": agent.log_alpha.detach().cpu(),
+
+        "replay_buffer": {
+            "state": buffer.state,
+            "action": buffer.action,
+            "reward": buffer.reward,
+            "next_state": buffer.next_state,
+            "done": buffer.done,
+            "ptr": buffer.ptr,
+            "size": buffer.size
+        }
+    }, path)
+    
+    
+def load_checkpoint(path, agent, buffer):
+    ckpt = torch.load(path)
+
+    agent.actor.load_state_dict(ckpt["actor"])
+    agent.critic1.load_state_dict(ckpt["critic1"])
+    agent.critic2.load_state_dict(ckpt["critic2"])
+    agent.critic1_target.load_state_dict(ckpt["critic1_target"])
+    agent.critic2_target.load_state_dict(ckpt["critic2_target"])
+
+    agent.actor_optimizer.load_state_dict(ckpt["actor_optimizer"])
+    agent.critic1_optimizer.load_state_dict(ckpt["critic1_optimizer"])
+    agent.critic2_optimizer.load_state_dict(ckpt["critic2_optimizer"])
+    agent.alpha_optimizer.load_state_dict(ckpt["alpha_optimizer"])
+    
+    with torch.no_grad():
+        agent.log_alpha.copy_(ckpt["log_alpha"])
+
+    buffer.state = ckpt["replay_buffer"]["state"]
+    buffer.action = ckpt["replay_buffer"]["action"]
+    buffer.reward = ckpt["replay_buffer"]["reward"]
+    buffer.next_state = ckpt["replay_buffer"]["next_state"]
+    buffer.done = ckpt["replay_buffer"]["done"]
+    buffer.ptr = ckpt["replay_buffer"]["ptr"]
+    buffer.size = ckpt["replay_buffer"]["size"]
+    
+
 if __name__ == "__main__":
     channel1 = EngineConfigurationChannel()
     channel1.set_configuration_parameters(time_scale=20.0)
@@ -271,9 +292,11 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = SACAgent(state_dim, action_dim)
-    #agent.actor.load_state_dict(torch.load("saved_model.pth"))
     buffer = ReplayBuffer(state_dim, action_dim)
     writer = SummaryWriter(log_dir="")
+    
+    # Set random_exploration_steps, learning_starts to 0
+    #load_checkpoint("checkpoint.pth", agent, buffer)
     
     random_exploration_steps = 10000
     learning_starts = 5000
@@ -373,8 +396,10 @@ if __name__ == "__main__":
                  writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
                  print(f"{test_average_reward:.4f}")
                  torch.save(agent.actor.state_dict(), "period_model.pth")
+                 save_checkpoint("checkpoint.pth", agent, buffer)                    
                          
                  if test_average_reward > best_test_reward:
                      best_test_reward = test_average_reward
-                     torch.save(agent.actor.state_dict(), "best_model.pth")
+                     torch.save(agent.actor.state_dict(), "best_model.pth") 
                      print(f"[Test] Model saved as 'best_model.pth' at new best reward {best_test_reward:.4f}")
+                     
