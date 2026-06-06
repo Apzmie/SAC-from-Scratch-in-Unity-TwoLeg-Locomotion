@@ -45,38 +45,6 @@ class ESAgent:
         
         #==========================================
         
-        ###########################################
-        ### Add Observation ###
-        ###########################################
-        
-        #old_state_dim = ?     
-        #old_model = Actor(old_state_dim, action_dim)
-        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
-        
-        #with torch.no_grad():
-        #    self.model.fc1.weight[:, :old_state_dim].copy_(old_model.fc1.weight)
-        #    self.model.fc1.bias.copy_(old_model.fc1.bias)
-        #    self.model.fc1.weight[:, old_state_dim:].zero_()
-        
-        #==========================================
-        
-        ###########################################
-        ### Add Action ###
-        ###########################################
-        
-        #old_action_dim = ?
-        #old_model = Actor(state_dim, old_action_dim)
-        #old_model.load_state_dict(torch.load("saved_model.pth"), strict=True)
-
-        #with torch.no_grad():
-        #    self.model.mean.weight[:old_action_dim].copy_(old_model.mean.weight)
-        #    self.model.mean.bias[:old_action_dim].copy_(old_model.mean.bias)
-
-        #    self.model.mean.weight[old_action_dim:].zero_()
-        #    self.model.mean.bias[old_action_dim:].zero_()
-        
-        #==========================================
-        
         self.sigma = sigma
         self.lr = lr
         self.population = population
