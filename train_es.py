@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
+BASE_DIR = ""
+
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=256):
@@ -38,7 +40,7 @@ class ESAgent:
         ### Load fc1, fc2, mean ###
         ###########################################
         
-        #state_dict = torch.load("saved_model.pth")
+        #state_dict = torch.load(f"{BASE_DIR}/best_model.pth")
         #self.model.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.model.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
         #self.model.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
@@ -105,8 +107,8 @@ if __name__ == "__main__":
     channel1.set_configuration_parameters(time_scale=20.0)
     channel2 = EngineConfigurationChannel()
     channel2.set_configuration_parameters(time_scale=20.0)
-    env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel1], no_graphics=True, worker_id=0)
-    test_env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel2], no_graphics=True, worker_id=1)
+    env = UnityEnvironment(file_name=f"{BASE_DIR}/Build.x86_64", side_channels=[channel1], no_graphics=True, worker_id=0)
+    test_env = UnityEnvironment(file_name=f"{BASE_DIR}/Build.x86_64", side_channels=[channel2], no_graphics=True, worker_id=1)
     env.reset()
     test_env.reset()
 
@@ -116,13 +118,14 @@ if __name__ == "__main__":
     state_dim = spec.observation_specs[0].shape[0]
     action_dim = spec.action_spec.continuous_size
     agent = ESAgent(state_dim, action_dim)
-    agent.model.load_state_dict(torch.load("best_model.pth"))
-    writer = SummaryWriter(log_dir="")
+    #agent.model.load_state_dict(torch.load(f"{BASE_DIR}/best_model.pth"))
+    writer = SummaryWriter(log_dir=BASE_DIR)
 
     test_interval = 10
-    max_step = 2000
+    max_step = 1000
 
     update_count = 0
+    save_idx = 0
     best_test_reward = -float('inf')
 
     while True:
@@ -229,9 +232,10 @@ if __name__ == "__main__":
             test_average_reward = np.mean(test_rewards)
             writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
             print(f"[Test] {test_average_reward:.4f}")
-            torch.save(agent.model.state_dict(), "period_model.pth")
+            torch.save(agent.model.state_dict(), f"{BASE_DIR}/period_model.pth")
 
             if test_average_reward > best_test_reward:
                 best_test_reward = test_average_reward
-                torch.save(agent.model.state_dict(), "best_model.pth")
-                print(f"[Test] Model saved as 'best_model.pth' at new best reward {best_test_reward:.4f}")
+                save_idx += 1
+                torch.save(agent.model.state_dict(), f"{BASE_DIR}/#({save_idx})best_{best_test_reward:.4f}.pth")
+                print(f"[Test] Model saved at new best reward {best_test_reward:.4f}")
