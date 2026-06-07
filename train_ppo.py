@@ -85,10 +85,10 @@ class PPOAgent:
         ### Load fc1, fc2, mean ###
         ###########################################
         
-        state_dict = torch.load(f"{BASE_DIR}/best_model.pth")
-        self.actor_critic.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
-        self.actor_critic.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
-        self.actor_critic.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
+        #state_dict = torch.load(f"{BASE_DIR}/best_model.pth")
+        #self.actor_critic.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
+        #self.actor_critic.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
+        #self.actor_critic.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
         
         #==========================================
         
