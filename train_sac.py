@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter       
 
+BASE_DIR = ""
+
 
 class PolicyNetwork(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=256):
@@ -112,7 +114,7 @@ class SACAgent:
         # Set random_exploration_steps to 0, learning_starts to the minimum
         ###########################################
         
-        #state_dict = torch.load("best_model.pth")
+        #state_dict = torch.load(f"{BASE_DIR}/best_model.pth")
         #self.actor.fc1.load_state_dict({"weight": state_dict["fc1.weight"], "bias": state_dict["fc1.bias"]})
         #self.actor.fc2.load_state_dict({"weight": state_dict["fc2.weight"], "bias": state_dict["fc2.bias"]})
         #self.actor.mean.load_state_dict({"weight": state_dict["mean.weight"], "bias": state_dict["mean.bias"]})
@@ -281,8 +283,8 @@ if __name__ == "__main__":
     channel1.set_configuration_parameters(time_scale=20.0)
     channel2 = EngineConfigurationChannel()
     channel2.set_configuration_parameters(time_scale=20.0)
-    env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel1], no_graphics=True, worker_id=0)
-    test_env = UnityEnvironment(file_name="Build.x86_64", side_channels=[channel2], no_graphics=True, worker_id=1)
+    env = UnityEnvironment(file_name=f"{BASE_DIR}/Build.x86_64", side_channels=[channel1], no_graphics=True, worker_id=0)
+    test_env = UnityEnvironment(file_name=f"{BASE_DIR}/Build.x86_64", side_channels=[channel2], no_graphics=True, worker_id=1)
     env.reset()
     test_env.reset()
     
@@ -293,10 +295,10 @@ if __name__ == "__main__":
     action_dim = spec.action_spec.continuous_size
     agent = SACAgent(state_dim, action_dim)
     buffer = ReplayBuffer(state_dim, action_dim)
-    writer = SummaryWriter(log_dir="")
+    writer = SummaryWriter(log_dir=BASE_DIR)
     
     # Set random_exploration_steps, learning_starts to 0
-    #load_checkpoint("checkpoint.pth", agent, buffer)
+    #load_checkpoint(f"{BASE_DIR}/checkpoint.pth", agent, buffer)
     
     random_exploration_steps = 10000
     learning_starts = 5000
@@ -305,6 +307,7 @@ if __name__ == "__main__":
     
     total_steps = 0
     update_count = 0
+    save_idx = 0
     best_test_reward = -float('inf')
     
     while True:
@@ -395,11 +398,12 @@ if __name__ == "__main__":
                  test_average_reward = np.mean(test_rewards)
                  writer.add_scalar("Test/Average_Reward", test_average_reward, update_count)
                  print(f"{test_average_reward:.4f}")
-                 torch.save(agent.actor.state_dict(), "period_model.pth")
-                 save_checkpoint("checkpoint.pth", agent, buffer)                    
+                 torch.save(agent.actor.state_dict(), f"{BASE_DIR}/period_model.pth")
+                 save_checkpoint(f"{BASE_DIR}/checkpoint.pth", agent, buffer)                    
                          
                  if test_average_reward > best_test_reward:
                      best_test_reward = test_average_reward
-                     torch.save(agent.actor.state_dict(), "best_model.pth") 
-                     print(f"[Test] Model saved as 'best_model.pth' at new best reward {best_test_reward:.4f}")
+                     save_idx += 1
+                     torch.save(agent.actor.state_dict(), f"{BASE_DIR}/#({save_idx})best_{best_test_reward:.4f}.pth") 
+                     print(f"[Test] Model saved at new best reward {best_test_reward:.4f}")
                      
