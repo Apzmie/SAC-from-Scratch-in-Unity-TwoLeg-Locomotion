@@ -98,32 +98,21 @@ class PPOAgent:
         
         #old_state_dim = ?     
         #old_model = ActorCritic(old_state_dim, action_dim)
-        #old_model.load_state_dict(torch.load(f"{BASE_DIR}/best_model.pth"), strict=True)
+        #old_model.load_state_dict(torch.load(f"{BASE_DIR}/best_model.pth"), strict=False)
+        
+        #for name, param in old_model.state_dict().items():
+        #    if "fc1" not in name:
+        #        self.actor_critic.state_dict()[name].copy_(param)
         
         #with torch.no_grad():
-        #    self.actor_critic.fc1.weight[:, :old_state_dim].copy_(old_model.fc1.weight)
-        #    self.actor_critic.fc1.bias.copy_(old_model.fc1.bias)
-        #    self.actor_critic.fc1.weight[:, old_state_dim:].zero_()
-        
-        #==========================================
-        
-        ###########################################
-        ### Add Action ###
-        ###########################################
-        
-        #old_action_dim = ?
-        #old_model = ActorCritic(state_dim, old_action_dim)
-        #old_model.load_state_dict(torch.load(f"{BASE_DIR}/best_model.pth"), strict=True)
+        #    old_w = old_model.fc1.weight
+        #    old_b = old_model.fc1.bias
 
-        #with torch.no_grad():
-        #    self.actor_critic.mean.weight[:old_action_dim].copy_(old_model.mean.weight)
-        #    self.actor_critic.mean.bias[:old_action_dim].copy_(old_model.mean.bias)
+        #    new_w = self.actor_critic.fc1.weight
+        #    new_w.zero_()
+        #    new_w[:, :old_state_dim].copy_(old_w)
 
-        #    self.actor_critic.mean.weight[old_action_dim:].zero_()
-        #    self.actor_critic.mean.bias[old_action_dim:].zero_()
-        
-        #    self.actor_critic.log_std[:old_action_dim].copy_(old_model.log_std)
-        #    self.actor_critic.log_std[old_action_dim:].fill_(-2.0)
+        #    self.actor_critic.fc1.bias.copy_(old_b)
         
         #==========================================
 
