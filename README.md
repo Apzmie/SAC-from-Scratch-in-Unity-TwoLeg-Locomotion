@@ -1,6 +1,8 @@
 # Under-Construction
 While PPO updates its policy by using samples collected from the current policy to adjust action probabilities, Soft Actor-Critic (SAC) updates its policy by using samples collected from even past policies to select actions with high Q-values. While DQN’s argmax over actions requires computing Q-values for all possible actions, which is infeasible in continuous action spaces, SAC solves this problem by using a critic to estimate Q-values and an actor to directly generate actions, enabling continuous action control. While PPO maximizes an entropy bonus in its total loss to encourage exploration during small policy updates, SAC maximizes entropy both in its loss and its target Q-values, making it more focused on entropy maximization than PPO.
 
+In a previous ES+PPO project, performance failed to improve beyond a certain point despite having room for further improvement. This project aims to see whether SAC can surpass that performance. The code was improved to enable further training across models saved from ES, PPO, and SAC. SAC is based on the paper [*Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor*](https://arxiv.org/pdf/1801.01290). 
+
 ## Environment
 ### Unity
 - Unity Editor: 6000.3.0f1
