@@ -5,6 +5,8 @@ In the previous ES+PPO project, performance failed to improve beyond a certain p
 
 Because I have no idea how to turn articulation reinforcement learning into a game, and Unity development takes too much time, in this case I will share the visual results only on YouTube instead of itch.io.
 
+<img src="images/twoleg_locomotion.png" alt="twoleg_locomotion.png" width="20%">
+
 ## Environment
 ### Unity
 - Unity Editor: 6000.3.0f1
